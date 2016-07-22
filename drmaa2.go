@@ -41,6 +41,7 @@ drmaa2_j malloc_job() {
    drmaa2_j job = (drmaa2_j) malloc(sizeof(drmaa2_j_s));
    job->id = NULL;
    job->session_name = NULL;
+   job->job_name = NULL;
    return job;
 }
 
@@ -707,6 +708,7 @@ type Job struct {
 	// job is private implementation specific (see struct drmaa2_j_s)
 	id           string
 	session_name string
+	job_name     string
 }
 
 // JobInfor is a struct which represents the current state of a job.
@@ -723,6 +725,7 @@ type JobInfo struct {
 	AllocatedMachines []string      `json:"allocatedMachines"`
 	SubmissionMachine string        `json:"submissionMachine"`
 	JobOwner          string        `json:"jobOwner"`
+	JobName           string        `json:"jobName"`
 	Slots             int64         `json:"slots"`
 	QueueName         string        `json:"queueName"`
 	WallclockTime     time.Duration `json:"wallockTime"`
@@ -906,10 +909,11 @@ func convertGoJobInfoToC(ji JobInfo) C.drmaa2_jinfo {
 	}
 	cji.jobSubState = convertGoStringToC(ji.SubState)
 	//cji.allocatedMachines = C.drmaa2_string_list(convertGoListToC(ji.AllocatedMachines))
-	//cji.submissionMachine = convertGoStringToC(ji.SubmissionMachine)
+	cji.submissionMachine = convertGoStringToC(ji.SubmissionMachine)
 	cji.jobOwner = convertGoStringToC(ji.JobOwner)
 	//cji.slots = C.longlong(ji.Slots)
 	cji.queueName = convertGoStringToC(ji.QueueName)
+	cji.jobName = convertGoStringToC(ji.JobName)
 
 	// TODO
 	// cji.wallclockTime
@@ -1018,6 +1022,7 @@ func convertCJobToGo(cj C.drmaa2_j) Job {
 	var job Job
 	job.id = C.GoString(cj.id)
 	job.session_name = C.GoString(cj.session_name)
+	job.job_name = C.GoString(cj.job_name)
 	return job
 }
 
@@ -1025,6 +1030,7 @@ func convertGoJobToC(job Job) C.drmaa2_j {
 	cjob := C.malloc_job()
 	cjob.id = C.CString(job.id)
 	cjob.session_name = C.CString(job.session_name)
+	cjob.job_name = C.CString(job.job_name)
 	return cjob
 }
 
@@ -1039,6 +1045,10 @@ func (job *Job) GetId() string {
 // method.
 func (job *Job) GetSessionName() string {
 	return job.session_name
+}
+
+func (job *Job) GetName() string {
+	return job.job_name
 }
 
 func goBool(v C.drmaa2_bool) bool {
@@ -1136,11 +1146,12 @@ func goJobInfo(cji C.drmaa2_jinfo) JobInfo {
 	jinfo.Id = C.GoString(ji.jobId)
 	jinfo.JobOwner = C.GoString(ji.jobOwner)
 	jinfo.QueueName = C.GoString(ji.queueName)
+	jinfo.JobName = C.GoString(ji.jobName)
 	jinfo.Slots = (int64)(ji.slots)
 	jinfo.State = goJobState(ji.jobState)
 	jinfo.SubState = C.GoString(ji.jobSubState)
 	jinfo.SubmissionTime = goTime(ji.submissionTime)
-	//jinfo.SubmissionMachine = C.GoString(ji.submissionMachine)
+	jinfo.SubmissionMachine = C.GoString(ji.submissionMachine)
 	jinfo.TerminatingSignal = C.GoString(ji.terminatingSignal)
 	jinfo.WallclockTime = goDuration(ji.wallclockTime)
 	jinfo.DispatchTime = goTime(ji.dispatchTime)
@@ -1414,6 +1425,9 @@ func convertCJobListToGo(jlist C.drmaa2_j_list) []Job {
 		cj := (C.drmaa2_j_s)(*cjob)
 		j.id = C.GoString(cj.id)
 		j.session_name = C.GoString(cj.session_name)
+		if cj.job_name != nil {
+			j.job_name = C.GoString(cj.job_name)
+		}
 		jobs = append(jobs, j)
 	}
 	return jobs

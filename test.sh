@@ -8,6 +8,7 @@ ARCH=`$SGE_ROOT/util/arch`
 export CGO_LDFLAGS="-L$SGE_ROOT/lib/$ARCH/"
 export CGO_CFLAGS="-I$SGE_ROOT/include"
 
-go build -a
-go install 
+export DYLD_LIBRARY_PATH=$SGE_ROOT/lib/$ARCH
+export LD_LIBRARY_PATH=$DYLD_LIBRARY_PATH
+go test -tags unit -v
 

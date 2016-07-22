@@ -1,8 +1,9 @@
-package drmaa2_test
+// +build unit
+
+package drmaa2
 
 import (
 	"fmt"
-	"github.com/dgruber/drmaa2"
 	"testing"
 )
 
@@ -10,7 +11,7 @@ import (
 // Requires the libdrmaa2.so in $LD_LIBRARY_PATH.
 func TestOpenMonitoringSession(t *testing.T) {
 	// Simple test for open and closing as MonitoringSession
-	var sm drmaa2.SessionManager
+	var sm SessionManager
 	ms, err := sm.OpenMonitoringSession("")
 	if err != nil {
 		t.Errorf("Couldn't open Monitoring session. %s", err)
@@ -26,7 +27,7 @@ func TestOpenMonitoringSession(t *testing.T) {
 }
 
 func TestMonitoringSessionGetAllMachines(t *testing.T) {
-	var sm drmaa2.SessionManager
+	var sm SessionManager
 	ms, err := sm.OpenMonitoringSession("")
 	if err != nil {
 		t.Errorf("Couldn't open Monitoring session: %s", err)
@@ -37,7 +38,6 @@ func TestMonitoringSessionGetAllMachines(t *testing.T) {
 	}
 	// get all machines
 	machine, err := ms.GetAllMachines(nil)
-
 	if err != nil {
 		t.Errorf("Error during GetAllMachines(nil): %s", err)
 		return
@@ -45,6 +45,9 @@ func TestMonitoringSessionGetAllMachines(t *testing.T) {
 	amount := len(machine)
 	if amount < 1 {
 		t.Errorf("Error: No machine returned in GetAllMachines(nil)")
+	}
+	for _, m := range machine {
+		t.Logf("Machine: %+v\n", m.Name)
 	}
 	// get a single machine
 	var names []string
@@ -64,9 +67,9 @@ func TestMonitoringSessionGetAllMachines(t *testing.T) {
 // TestReapJob tests job reaping from internal lists by calling the job's
 // Reap() method.
 func TestReapJob(t *testing.T) {
-	var sm drmaa2.SessionManager
+	var sm SessionManager
 	var err error
-	var js *drmaa2.JobSession
+	var js *JobSession
 
 	// create or open job session
 	if js, err = sm.OpenJobSession("TestReapJob"); err != nil {
@@ -76,7 +79,7 @@ func TestReapJob(t *testing.T) {
 	}
 	defer sm.DestroyJobSession("TestReapJob")
 
-	var jt drmaa2.JobTemplate
+	var jt JobTemplate
 	jt.RemoteCommand = "/bin/sleep"
 	jt.Args = []string{"1"}
 
@@ -89,7 +92,7 @@ func TestReapJob(t *testing.T) {
 	}
 
 	// wait until sleep is finished
-	job.WaitTerminated(drmaa2.InfiniteTime)
+	job.WaitTerminated(InfiniteTime)
 
 	// it finsihed jobs appear in all job lists (GetJobs / monitoring session GetAllJobs)
 	jl, errJL := js.GetJobs(nil)
@@ -114,9 +117,9 @@ func TestReapJob(t *testing.T) {
 }
 
 func TestGetJobTemplate(t *testing.T) {
-	var jt drmaa2.JobTemplate
-	var sm drmaa2.SessionManager
-	var js *drmaa2.JobSession
+	var jt JobTemplate
+	var sm SessionManager
+	var js *JobSession
 	var err error
 
 	if js, err = sm.OpenJobSession("TestGetJobTemplate"); err != nil {

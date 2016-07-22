@@ -906,7 +906,7 @@ func convertGoJobInfoToC(ji JobInfo) C.drmaa2_jinfo {
 	}
 	cji.jobSubState = convertGoStringToC(ji.SubState)
 	//cji.allocatedMachines = C.drmaa2_string_list(convertGoListToC(ji.AllocatedMachines))
-	cji.submissionMachine = convertGoStringToC(ji.SubmissionMachine)
+	//cji.submissionMachine = convertGoStringToC(ji.SubmissionMachine)
 	cji.jobOwner = convertGoStringToC(ji.JobOwner)
 	//cji.slots = C.longlong(ji.Slots)
 	cji.queueName = convertGoStringToC(ji.QueueName)
@@ -1060,6 +1060,18 @@ func goStringList(string_list C.drmaa2_string_list) []string {
 	return strings
 }
 
+func goSlotInfoList(slotinfo_list C.drmaa2_slotinfo_list) []string {
+	strings := make([]string, 0)
+	if slotinfo_list != nil {
+		size := (int64)(C.drmaa2_list_size((C.drmaa2_list)(slotinfo_list)))
+		for i := (int64)(0); i < size; i++ {
+			cstr := (*C.char)(C.drmaa2_list_get((C.drmaa2_list)(slotinfo_list), C.long(i)))
+			strings = append(strings, C.GoString(cstr))
+		}
+	}
+	return strings
+}
+
 func goOS(os C.drmaa2_os) OS {
 	return osMap[os]
 }
@@ -1117,7 +1129,7 @@ func goJobInfo(cji C.drmaa2_jinfo) JobInfo {
 	var jinfo JobInfo
 	/* convert C job info into Go job info */
 	ji := (C.drmaa2_jinfo_s)(*cji)
-	jinfo.AllocatedMachines = goStringList(ji.allocatedMachines)
+	jinfo.AllocatedMachines = goSlotInfoList(ji.allocatedMachines)
 	jinfo.Annotation = C.GoString(ji.annotation)
 	jinfo.CPUTime = (int64)(ji.cpuTime)
 	jinfo.ExitStatus = (int)(ji.exitStatus)
@@ -1128,7 +1140,7 @@ func goJobInfo(cji C.drmaa2_jinfo) JobInfo {
 	jinfo.State = goJobState(ji.jobState)
 	jinfo.SubState = C.GoString(ji.jobSubState)
 	jinfo.SubmissionTime = goTime(ji.submissionTime)
-	jinfo.SubmissionMachine = C.GoString(ji.submissionMachine)
+	//jinfo.SubmissionMachine = C.GoString(ji.submissionMachine)
 	jinfo.TerminatingSignal = C.GoString(ji.terminatingSignal)
 	jinfo.WallclockTime = goDuration(ji.wallclockTime)
 	jinfo.DispatchTime = goTime(ji.dispatchTime)

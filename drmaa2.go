@@ -24,6 +24,7 @@ Copyright 2014, 2015 Daniel Gruber, http://www.gridengine.eu
 package drmaa2
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -35,6 +36,10 @@ import (
  #include <stdio.h>
  #include <stdlib.h>
  #include <stddef.h>
+#if __APPLE__
+ #include <unistd.h>
+#endif
+ #include <string.h>
  #include "drmaa2.h"
 
 drmaa2_j malloc_job() {
@@ -43,6 +48,13 @@ drmaa2_j malloc_job() {
    job->session_name = NULL;
    job->job_name = NULL;
    return job;
+}
+
+int is_null(void* pointer) {
+  if (NULL == pointer) {
+    return 1;
+  }
+  return 0;
 }
 
 drmaa2_jarray malloc_array_job() {
@@ -88,10 +100,24 @@ drmaa2_jtemplate malloc_jtemplate() {
    jt->implementationSpecific = DRMAA2_UNSET_STRING;
    return jt;
 }
+
+static drmaa2_sudo_t * makeSudo(char *uname, char *gname, long uid, long gid) {
+        drmaa2_sudo_t * sudo = (drmaa2_sudo_t *)calloc(sizeof(drmaa2_sudo_t), 1);
+        strncpy(sudo->username, uname, strlen(uname) + 1);
+        strncpy(sudo->groupname, gname, strlen(gname) + 1);
+        sudo->uid = (uid_t) uid;
+        sudo->gid = (gid_t) gid;
+        return sudo;
+}
 */
 import "C"
 
 // Interface definitions
+
+// Expose UnsetNum for use with job filters
+func UnsetNum() int {
+	return C.DRMAA2_UNSET_NUM
+}
 
 // StructType is a type which represents the type of
 // an extensible structure.
@@ -123,7 +149,7 @@ type Drmaa2Extensible interface {
 	ListExtensions() []string
 	DescribeExtension(string) string
 	SetExtension(string) error
-	GetExtension() string
+	GetExtension() (string, error)
 	// points to data structure extension from C struct
 }
 
@@ -1202,7 +1228,7 @@ func (job *Job) GetJobTemplate() (*JobTemplate, error) {
 	}
 	defer C.drmaa2_j_free(&cjob)
 
-	cjt := C.drmaa2_j_get_jt(cjob)
+	cjt := C.drmaa2_j_get_jtemplate(cjob)
 	// TODO convert C job template into Go jobtemplate
 	if cjt != nil {
 		defer C.drmaa2_jtemplate_free(&cjt)
@@ -1251,21 +1277,29 @@ const (
 	terminate
 )
 
-func (job *Job) modify(operation modop) error {
+func (job *Job) modify(delegate *Sudo, operation modop) error {
 	cjob := convertGoJobToC(*job)
+	var as *C.drmaa2_sudo_t = nil
+	if delegate != nil {
+		as = sudoToC(*delegate)
+		if as == nil {
+			return errors.New("Couldn't convert sudo request.")
+		}
+		defer C.free(unsafe.Pointer(as))
+	}
 	var ret C.drmaa2_error
 
 	switch operation {
 	case suspend:
-		ret = C.drmaa2_j_suspend(cjob)
+		ret = C.drmaa2_j_suspend_as(as, cjob)
 	case resume:
-		ret = C.drmaa2_j_resume(cjob)
+		ret = C.drmaa2_j_resume_as(as, cjob)
 	case hold:
-		ret = C.drmaa2_j_hold(cjob)
+		ret = C.drmaa2_j_hold_as(as, cjob)
 	case release:
-		ret = C.drmaa2_j_release(cjob)
+		ret = C.drmaa2_j_release_as(as, cjob)
 	case terminate:
-		ret = C.drmaa2_j_terminate(cjob)
+		ret = C.drmaa2_j_terminate_as(as, cjob)
 	}
 	defer C.drmaa2_j_free(&cjob)
 	if ret != C.DRMAA2_SUCCESS {
@@ -1277,13 +1311,13 @@ func (job *Job) modify(operation modop) error {
 // Stops a job / process from beeing executed (typically a
 // SIGSTOP or SIGTSTP signal is sent to the job / process).
 func (job *Job) Suspend() error {
-	return job.modify(suspend)
+	return job.modify(nil, suspend)
 }
 
 // Resume continues to run a job / process (typically
 // a SIGCONT signal is sent to the job / process).
 func (job *Job) Resume() error {
-	return job.modify(resume)
+	return job.modify(nil, resume)
 }
 
 // Hold set the job into an hold state so that it is not
@@ -1291,18 +1325,24 @@ func (job *Job) Resume() error {
 // to run and the hold state becomes only effectice when
 // the job is rescheduled.
 func (job *Job) Hold() error {
-	return job.modify(hold)
+	return job.modify(nil, hold)
 }
 
 // Release removes the hold state from the job so that it will
 // be considered as a schedulable job.
 func (job *Job) Release() error {
-	return job.modify(release)
+	return job.modify(nil, release)
 }
 
 // Terminate tells the resource manager to kill the job.
 func (job *Job) Terminate() error {
-	return job.modify(terminate)
+	return job.modify(nil, terminate)
+}
+
+// TerminateAs tells the resource manager to kill the job.
+// This will run as the specififed sudo user.
+func (job *Job) TerminateAs(delegate Sudo) error {
+	return job.modify(&delegate, terminate)
 }
 
 // Blocking wait until the job is started. The timeout
@@ -1403,6 +1443,17 @@ func (ms *MonitoringSession) CloseMonitoringSession() error {
 	}
 	C.drmaa2_msession_free(&ms.ms)
 	return makeLastError()
+}
+
+func sudoToC(delegate Sudo) *C.drmaa2_sudo_t {
+	if len(delegate.Username) <= 128 && len(delegate.Groupname) <= 128 {
+		uname := C.CString(delegate.Username)
+		defer C.free(unsafe.Pointer(uname))
+		gname := C.CString(delegate.Groupname)
+		defer C.free(unsafe.Pointer(gname))
+		return C.makeSudo(uname, gname, C.long(delegate.UID), C.long(delegate.GID))
+	}
+	return nil
 }
 
 func convertCJobListToGo(jlist C.drmaa2_j_list) []Job {
@@ -1693,6 +1744,16 @@ type Notification struct {
 	State       JobState `json:"jobState"`
 }
 
+// Sudo is a sudoers requrest in order to submit a job on behalf
+// of another user. This is not part of the DRMAA spec but it is
+// included in Univa Grid Engine's DRMAA implementation since 8.3 FCS.
+type Sudo struct {
+	Username  string
+	Groupname string
+	UID       int
+	GID       int
+}
+
 // A Callback is a function which works on the notification
 // struct.
 type CallbackFunction func(notification Notification)
@@ -1816,6 +1877,31 @@ func (js *JobSession) GetJobArray(id string) (*ArrayJob, error) {
 	return nil, makeLastError()
 }
 
+// RunJobAs submits a job in a (initialized) session to the cluster scheduler
+// and executes the job as the user given by the Sudo structure. Note that
+// this might not be allowed when the user has not the priviledges in the
+// DRM. This is not a DRMAA standardized function!
+func (js *JobSession) RunJobAs(delegate Sudo, jt JobTemplate) (*Job, error) {
+	// create C.drmaa2_jtemplate and fill in values
+	cjtemplate := convertGoJtemplateToC(jt)
+	defer C.drmaa2_jtemplate_free(&cjtemplate)
+
+	as := sudoToC(delegate)
+	if as == nil {
+		return nil, errors.New("Couldn't convert sudo request.")
+	}
+	defer C.free(unsafe.Pointer(as))
+	// set extensions into job template
+	setExtensionsIntoCObject(unsafe.Pointer(cjtemplate), jt.ExtensionList)
+
+	if cjob := C.drmaa2_jsession_run_job_as(as, js.js, cjtemplate); cjob != nil {
+		defer C.drmaa2_j_free(&cjob)
+		job := convertCJobToGo(cjob)
+		return &job, nil
+	}
+	return nil, makeLastError()
+}
+
 // RunJob submits a job based on the parameters specified in the JobTemplate
 // in the cluster. In case of success it returns a pointer to a Job
 // element, which can be used for further processing. In case of an
@@ -1831,6 +1917,24 @@ func (js *JobSession) RunJob(jt JobTemplate) (*Job, error) {
 	if cjob := C.drmaa2_jsession_run_job(js.js, cjtemplate); cjob != nil {
 		defer C.drmaa2_j_free(&cjob)
 		job := convertCJobToGo(cjob)
+		return &job, nil
+	}
+	return nil, makeLastError()
+}
+
+// RunBulkJobsAs submits a job as an array job on behalf of the user
+// given by the Sudo structure. Note that this is not
+func (js *JobSession) RunBulkJobsAs(delegate Sudo, jt JobTemplate, begin int, end int, step int, maxParallel int) (*ArrayJob, error) {
+	as := sudoToC(delegate)
+	if as == nil {
+		return nil, errors.New("Could not create sudo structure.")
+	}
+	defer C.free(unsafe.Pointer(as))
+	cjtemplate := convertGoJtemplateToC(jt)
+	if cajob := C.drmaa2_jsession_run_bulk_jobs_as(as, js.js, cjtemplate, C.longlong(begin),
+		C.longlong(end), C.longlong(step), C.longlong(maxParallel)); cajob != nil {
+		defer C.drmaa2_jarray_free(&cajob)
+		job := convertCArrayJobToGo(cajob)
 		return &job, nil
 	}
 	return nil, makeLastError()

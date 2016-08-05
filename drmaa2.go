@@ -50,13 +50,6 @@ drmaa2_j malloc_job() {
    return job;
 }
 
-int is_null(void* pointer) {
-  if (NULL == pointer) {
-    return 1;
-  }
-  return 0;
-}
-
 drmaa2_jarray malloc_array_job() {
    drmaa2_jarray ja = (drmaa2_jarray) malloc(sizeof(drmaa2_jarray_s));
    ja->id = NULL;
@@ -109,6 +102,7 @@ static drmaa2_sudo_t * makeSudo(char *uname, char *gname, long uid, long gid) {
         sudo->gid = (gid_t) gid;
         return sudo;
 }
+
 */
 import "C"
 
@@ -806,37 +800,38 @@ type Machine struct {
 }
 
 type JobTemplate struct {
-	Extension         `xml:"-" json:"-"`
-	RemoteCommand     string            `json:"remoteCommand"`
-	Args              []string          `json:"args"`
-	SubmitAsHold      bool              `json:"submitAsHold"`
-	ReRunnable        bool              `json:"reRunnable"`
-	JobEnvironment    map[string]string `json:"jobEnvironment"`
-	WorkingDirectory  string            `json:"workingDirectory"`
-	JobCategory       string            `json:"jobCategory"`
-	Email             []string          `json:"email"`
-	EmailOnStarted    bool              `json:"emailOnStarted"`
-	EmailOnTerminated bool              `json:"emailOnTerminated"`
-	JobName           string            `json:"jobName"`
-	InputPath         string            `json:"inputPath"`
-	OutputPath        string            `json:"outputPath"`
-	ErrorPath         string            `json:"errorPath"`
-	JoinFiles         bool              `json:"joinFiles"`
-	ReservationId     string            `json:"reservationId"`
-	QueueName         string            `json:"queueName"`
-	MinSlots          int64             `json:"minSlots"`
-	MaxSlots          int64             `json:"maxSlots"`
-	Priority          int64             `json:"priority"`
-	CandidateMachines []string          `json:"candidateMachines"`
-	MinPhysMemory     int64             `json:"minPhysMemory"`
-	MachineOs         string            `json:"machineOs"`
-	MachineArch       string            `json:"machineArch"`
-	StartTime         time.Time         `json:"startTime"`
-	DeadlineTime      time.Time         `json:"deadlineTime"`
-	StageInFiles      map[string]string `json:"stageInFiles"`
-	StageOutFiles     map[string]string `json:"stageOutFiles"`
-	ResourceLimits    map[string]string `json:"resourceLimits"`
-	AccountingId      string            `json:"accountingString"`
+	Extension              `xml:"-" json:"-"`
+	RemoteCommand          string            `json:"remoteCommand"`
+	Args                   []string          `json:"args"`
+	SubmitAsHold           bool              `json:"submitAsHold"`
+	ReRunnable             bool              `json:"reRunnable"`
+	JobEnvironment         map[string]string `json:"jobEnvironment"`
+	WorkingDirectory       string            `json:"workingDirectory"`
+	JobCategory            string            `json:"jobCategory"`
+	Email                  []string          `json:"email"`
+	EmailOnStarted         bool              `json:"emailOnStarted"`
+	EmailOnTerminated      bool              `json:"emailOnTerminated"`
+	JobName                string            `json:"jobName"`
+	InputPath              string            `json:"inputPath"`
+	OutputPath             string            `json:"outputPath"`
+	ErrorPath              string            `json:"errorPath"`
+	JoinFiles              bool              `json:"joinFiles"`
+	ReservationId          string            `json:"reservationId"`
+	QueueName              string            `json:"queueName"`
+	MinSlots               int64             `json:"minSlots"`
+	MaxSlots               int64             `json:"maxSlots"`
+	Priority               int64             `json:"priority"`
+	CandidateMachines      []string          `json:"candidateMachines"`
+	MinPhysMemory          int64             `json:"minPhysMemory"`
+	MachineOs              string            `json:"machineOs"`
+	MachineArch            string            `json:"machineArch"`
+	StartTime              time.Time         `json:"startTime"`
+	DeadlineTime           time.Time         `json:"deadlineTime"`
+	StageInFiles           map[string]string `json:"stageInFiles"`
+	StageOutFiles          map[string]string `json:"stageOutFiles"`
+	ResourceLimits         map[string]string `json:"resourceLimits"`
+	AccountingId           string            `json:"accountingString"`
+	ImplementationSpecific map[string]string `json:"implementationSpecific"`
 }
 
 type ReservationTemplate struct {
@@ -922,7 +917,6 @@ func convertGoJtemplateToC(jt JobTemplate) C.drmaa2_jtemplate {
 // need to be UNSET...
 func convertGoJobInfoToC(ji JobInfo) C.drmaa2_jinfo {
 	cji := C.drmaa2_jinfo_create()
-	// TODO JobName is missing in JobInfo (DRMAA2 issue)
 	cji.jobId = convertGoStringToC(ji.Id)
 	if ji.ExitStatus != C.DRMAA2_UNSET_NUM {
 		cji.exitStatus = C.int(ji.ExitStatus)
@@ -1233,6 +1227,16 @@ func (job *Job) GetJobTemplate() (*JobTemplate, error) {
 	if cjt != nil {
 		defer C.drmaa2_jtemplate_free(&cjt)
 		jt := convertCJtemplateToGo(cjt)
+		// Now Add the implementation specific stuff
+		jt.ImplementationSpecific = make(map[string]string)
+		for _, extension := range jt.ListExtensions() {
+			cval := C.drmaa2_get_instance_value(unsafe.Pointer(cjt), C.CString(extension))
+			if cval == nil {
+				continue
+			}
+			defer C.free(unsafe.Pointer(cval))
+			jt.ImplementationSpecific[extension] = C.GoString(cval)
+		}
 		return &jt, nil
 	}
 	return nil, makeLastError()

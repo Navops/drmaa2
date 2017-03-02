@@ -1303,7 +1303,7 @@ func (job *Job) modify(delegate *Sudo, operation modop) error {
 	case release:
 		ret = C.drmaa2_j_release_as(as, cjob)
 	case terminate:
-		ret = C.drmaa2_j_terminate_as(as, cjob)
+		ret = C.drmaa2_j_terminate_as(as, cjob, DRMAA2_FALSE)
 	}
 	defer C.drmaa2_j_free(&cjob)
 	if ret != C.DRMAA2_SUCCESS {

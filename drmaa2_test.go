@@ -2,7 +2,7 @@ package drmaa2_test
 
 import (
 	"fmt"
-	"github.com/dgruber/drmaa2"
+	"github.com/Navops/drmaa2"
 	"testing"
 )
 

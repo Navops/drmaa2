@@ -113,31 +113,31 @@ func UnsetNum() int {
 	return C.DRMAA2_UNSET_NUM
 }
 
-// StructType is a type which represents the type of
+// structType is a type which represents the type of
 // an extensible structure.
-type StructType int
+type structType int
 
 const (
-	JobTemplateType = iota
-	JobInfoType
-	ReservationTemplateType
-	ReservationInfoType
-	QueueInfoType
-	MachineInfoType
-	NotificationType
+	jobTemplateType = iota
+	jobInfoType
+	reservationTemplateType
+	reservationInfoType
+	queueInfoType
+	machineInfoType
+	notificationType
 )
 
 // Extension is a struct which is embedded in DRMAA2 objects
 // which are extensible.
 type Extension struct {
-	SType         StructType        // Stores the type of the struct
+	SType         structType        // Stores the type of the struct
 	Internal      unsafe.Pointer    // Enhancmement of C struct
 	ExtensionList map[string]string // stores the extension requests as string
 }
 
-// Drmaa2Extensible is an interface which defines functions used to
+// Extensible is an interface which defines functions used to
 // interact with extensible data structures (JobTemplate, JobInfo etc.).
-type Drmaa2Extensible interface {
+type Extensible interface {
 	// Lists all implementation specific key names for
 	// a particular DRMAA2 extensible data type
 	ListExtensions() []string
@@ -150,22 +150,22 @@ type Drmaa2Extensible interface {
 // listExtension calls the C function for listing implementation specific
 // enhancements for an object defined by the argument of the
 // function.
-func listExtensions(t StructType) []string {
+func listExtensions(t structType) []string {
 	var clist C.drmaa2_string_list
 	switch t {
-	case JobTemplateType:
+	case jobTemplateType:
 		clist = C.drmaa2_jtemplate_impl_spec()
-	case JobInfoType:
+	case jobInfoType:
 		clist = C.drmaa2_jinfo_impl_spec()
-	case ReservationTemplateType:
+	case reservationTemplateType:
 		clist = C.drmaa2_rtemplate_impl_spec()
-	case QueueInfoType:
+	case queueInfoType:
 		clist = C.drmaa2_queueinfo_impl_spec()
-	case MachineInfoType:
+	case machineInfoType:
 		clist = C.drmaa2_machineinfo_impl_spec()
-	case ReservationInfoType:
+	case reservationInfoType:
 		clist = C.drmaa2_rinfo_impl_spec()
-	case NotificationType:
+	case notificationType:
 		clist = C.drmaa2_notification_impl_spec()
 	default:
 	}
@@ -181,28 +181,28 @@ func listExtensions(t StructType) []string {
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the JobTemplate object.
 func (jt *JobTemplate) ListExtensions() []string {
-	return listExtensions(JobTemplateType)
+	return listExtensions(jobTemplateType)
 }
 
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the Machine object.
 func (m *Machine) ListExtensions() []string {
-	return listExtensions(MachineInfoType)
+	return listExtensions(machineInfoType)
 }
 
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the Queue object.
 func (q *Queue) ListExtensions() []string {
-	return listExtensions(QueueInfoType)
+	return listExtensions(queueInfoType)
 }
 
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the JobInfo object.
 func (ji *JobInfo) ListExtensions() []string {
-	return listExtensions(JobInfoType)
+	return listExtensions(jobInfoType)
 }
 
-func (ext *Extension) describeExtension(t StructType, extensionName string) (string, error) {
+func (ext *Extension) describeExtension(t structType, extensionName string) (string, error) {
 	if ext.Internal != nil {
 		cdesc := C.drmaa2_describe_attribute(ext.Internal,
 			C.CString(extensionName))
@@ -218,7 +218,7 @@ func (ext *Extension) describeExtension(t StructType, extensionName string) (str
 	var description C.drmaa2_string
 
 	switch t {
-	case JobInfoType:
+	case jobInfoType:
 		jt := C.drmaa2_jtemplate_create()
 		description = C.drmaa2_describe_attribute(jt.implementationSpecific,
 			C.CString(extensionName))
@@ -240,13 +240,13 @@ func (ext *Extension) describeExtension(t StructType, extensionName string) (str
 // JobTemplate extension as a string.
 func (jt *JobTemplate) DescribeExtension(extensionName string) (string, error) {
 	// good candidate for an init function in the session manager
-	return jt.describeExtension(JobTemplateType, extensionName)
+	return jt.describeExtension(jobTemplateType, extensionName)
 }
 
 // TODO MachineInfo / Queue / JobInfo etc.
 
 // checks if a certain extension exists for a given type
-func extensionExists(t StructType, ext string) bool {
+func extensionExists(t structType, ext string) bool {
 	// TODO expensive - better store available extensions
 	// here a DRMAA2 init could be really useful
 	extensions := listExtensions(t)
@@ -259,7 +259,7 @@ func extensionExists(t StructType, ext string) bool {
 }
 
 // Sets a DRM specific extension to a value
-func (ext *Extension) setExtension(t StructType, extension, value string) error {
+func (ext *Extension) setExtension(t structType, extension, value string) error {
 	if extensionExists(t, extension) {
 		if ext.ExtensionList == nil {
 			ext.ExtensionList = make(map[string]string)
@@ -272,22 +272,22 @@ func (ext *Extension) setExtension(t StructType, extension, value string) error 
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (jt *JobTemplate) SetExtension(extension, value string) error {
-	return jt.setExtension(JobTemplateType, extension, value)
+	return jt.setExtension(jobTemplateType, extension, value)
 }
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (m *Machine) SetExtension(extension, value string) error {
-	return m.setExtension(MachineInfoType, extension, value)
+	return m.setExtension(machineInfoType, extension, value)
 }
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (ji *JobInfo) SetExtension(extension, value string) error {
-	return ji.setExtension(JobInfoType, extension, value)
+	return ji.setExtension(jobInfoType, extension, value)
 }
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (q *Queue) SetExtension(extension, value string) error {
-	return q.setExtension(QueueInfoType, extension, value)
+	return q.setExtension(queueInfoType, extension, value)
 }
 
 // TODO the other extensions: notification / reservation info / template
@@ -387,10 +387,10 @@ var capMap = map[Capability]C.drmaa2_capability{
 }
 
 // DRMAA2 error ID
-type ErrorId int
+type errorId int
 
 const (
-	Success ErrorId = iota
+	Success errorId = iota
 	DeniedByDrms
 	DrmCommunication
 	TryLater
@@ -408,7 +408,7 @@ const (
 )
 
 // Maps a C drmaa2_error type into a Go ErrorId
-var errorIdMap = map[C.drmaa2_error]ErrorId{
+var errorIdMap = map[C.drmaa2_error]errorId{
 	C.DRMAA2_SUCCESS:                 Success,
 	C.DRMAA2_DENIED_BY_DRMS:          DeniedByDrms,
 	C.DRMAA2_DRM_COMMUNICATION:       DrmCommunication,
@@ -649,7 +649,7 @@ func convertGoStateToC(s JobState) (state C.drmaa2_jstate) {
 // DRMAA2 error (implements GO Error interface).
 type Error struct {
 	Message string
-	Id      ErrorId
+	Id      errorId
 }
 
 // The DRMAA2 Error implements the Error interface.
@@ -666,7 +666,7 @@ func (ce Error) String() string {
 func makeError(msg string, id ErrorId) Error {
 	var ce Error
 	ce.Message = msg
-	ce.Id = id
+	ce.ID = id
 	return ce
 }
 
@@ -675,7 +675,7 @@ func makeLastError() *Error {
 	defer C.free(unsafe.Pointer(cerr))
 	msg := C.GoString(cerr)
 	id := C.drmaa2_lasterror()
-	err := makeError(msg, errorIdMap[id])
+	err := makeError(msg, errorIDMap[id])
 	return &err
 }
 
@@ -731,21 +731,27 @@ type Job struct {
 	job_name     string
 }
 
-// JobInfor is a struct which represents the current state of a job.
+// SlotInfo represents the amount of slots used on a particular host.
+type SlotInfo struct {
+	MachineName string
+	Slots       int64
+}
+
+// JobInfo is a struct which represents the current state of a job.
 type JobInfo struct {
 	// reference to the void* pointer which
 	// is used for extensions
 	Extension         `xml:"-" json:"-"`
 	Id                string        `json:"id"`
+	JobName           string        `json:"jobName"`
 	ExitStatus        int           `json:"exitStatus"`
 	TerminatingSignal string        `json:"terminationSignal"`
 	Annotation        string        `json:"annotation"`
 	State             JobState      `json:"state"`
 	SubState          string        `json:"subState"`
-	AllocatedMachines []string      `json:"allocatedMachines"`
+	AllocatedMachines []SlotInfo    `json:"allocatedMachines"`
 	SubmissionMachine string        `json:"submissionMachine"`
 	JobOwner          string        `json:"jobOwner"`
-	JobName           string        `json:"jobName"`
 	Slots             int64         `json:"slots"`
 	QueueName         string        `json:"queueName"`
 	WallclockTime     time.Duration `json:"wallockTime"`
@@ -918,6 +924,7 @@ func convertGoJtemplateToC(jt JobTemplate) C.drmaa2_jtemplate {
 func convertGoJobInfoToC(ji JobInfo) C.drmaa2_jinfo {
 	cji := C.drmaa2_jinfo_create()
 	cji.jobId = convertGoStringToC(ji.Id)
+	cji.jobName = convertGoStringToC(ji.JobName)
 	if ji.ExitStatus != C.DRMAA2_UNSET_NUM {
 		cji.exitStatus = C.int(ji.ExitStatus)
 	}
@@ -933,7 +940,6 @@ func convertGoJobInfoToC(ji JobInfo) C.drmaa2_jinfo {
 	cji.jobOwner = convertGoStringToC(ji.JobOwner)
 	//cji.slots = C.longlong(ji.Slots)
 	cji.queueName = convertGoStringToC(ji.QueueName)
-	cji.jobName = convertGoStringToC(ji.JobName)
 
 	// TODO
 	// cji.wallclockTime
@@ -1158,21 +1164,40 @@ func goMap(dict C.drmaa2_dict) map[string]string {
 func goJobInfo(cji C.drmaa2_jinfo) JobInfo {
 	var jinfo JobInfo
 	/* convert C job info into Go job info */
+
+	if cji == nil {
+		return jinfo
+	}
+
 	ji := (C.drmaa2_jinfo_s)(*cji)
-	jinfo.AllocatedMachines = goSlotInfoList(ji.allocatedMachines)
-	jinfo.Annotation = C.GoString(ji.annotation)
+	//	jinfo.AllocatedMachines = goSlotInfoList(ji.allocatedMachines)
+	//	jinfo.Annotation = C.GoString(ji.annotation)
 	jinfo.CPUTime = (int64)(ji.cpuTime)
 	jinfo.ExitStatus = (int)(ji.exitStatus)
-	jinfo.Id = C.GoString(ji.jobId)
-	jinfo.JobOwner = C.GoString(ji.jobOwner)
-	jinfo.QueueName = C.GoString(ji.queueName)
-	jinfo.JobName = C.GoString(ji.jobName)
+	if ji.jobId != nil {
+		jinfo.Id = C.GoString(ji.jobId)
+	}
+	if ji.jobOwner != nil {
+		jinfo.JobOwner = C.GoString(ji.jobOwner)
+	}
+	if ji.queueName != nil {
+		jinfo.QueueName = C.GoString(ji.queueName)
+	}
+	if ji.jobName != nil {
+		jinfo.JobName = C.GoString(ji.jobName)
+	}
 	jinfo.Slots = (int64)(ji.slots)
 	jinfo.State = goJobState(ji.jobState)
-	jinfo.SubState = C.GoString(ji.jobSubState)
+	if ji.jobSubState != nil {
+		jinfo.SubState = C.GoString(ji.jobSubState)
+	}
 	jinfo.SubmissionTime = goTime(ji.submissionTime)
-	jinfo.SubmissionMachine = C.GoString(ji.submissionMachine)
-	jinfo.TerminatingSignal = C.GoString(ji.terminatingSignal)
+	if ji.submissionMachine != nil {
+		jinfo.SubmissionMachine = C.GoString(ji.submissionMachine)
+	}
+	if ji.terminatingSignal != nil {
+		jinfo.TerminatingSignal = C.GoString(ji.terminatingSignal)
+	}
 	jinfo.WallclockTime = goDuration(ji.wallclockTime)
 	jinfo.DispatchTime = goTime(ji.dispatchTime)
 	jinfo.FinishTime = goTime(ji.finishTime)
@@ -1279,6 +1304,7 @@ const (
 	hold
 	release
 	terminate
+	terminate_forced
 )
 
 func (job *Job) modify(delegate *Sudo, operation modop) error {
@@ -1304,12 +1330,19 @@ func (job *Job) modify(delegate *Sudo, operation modop) error {
 		ret = C.drmaa2_j_release_as(as, cjob)
 	case terminate:
 		ret = C.drmaa2_j_terminate_as(as, cjob, C.DRMAA2_FALSE)
+	case terminate_forced:
+		ret = C.drmaa2_j_terminate_as(as, cjob, C.DRMAA2_TRUE)
 	}
 	defer C.drmaa2_j_free(&cjob)
 	if ret != C.DRMAA2_SUCCESS {
 		return makeLastError()
 	}
 	return nil
+}
+
+// Terminate tells the resource manager to kill the job.
+func (job *Job) TerminateForced() error {
+	return job.modify(terminate_forced)
 }
 
 // Stops a job / process from beeing executed (typically a
@@ -1442,7 +1475,7 @@ func (sm *SessionManager) OpenMonitoringSession(sessionName string) (*Monitoring
 func (ms *MonitoringSession) CloseMonitoringSession() error {
 	err_cstr := C.drmaa2_close_msession(ms.ms)
 	if err_cstr == C.DRMAA2_SUCCESS {
-		C.drmaa2_msession_free(&ms.ms)
+		defer C.drmaa2_msession_free(&ms.ms)
 		return nil
 	}
 	C.drmaa2_msession_free(&ms.ms)
@@ -1486,6 +1519,31 @@ func convertCJobListToGo(jlist C.drmaa2_j_list) []Job {
 		jobs = append(jobs, j)
 	}
 	return jobs
+}
+
+func convertCSlotInfoListToGo(silist C.drmaa2_slotinfo_list) []SlotInfo {
+	if silist == nil {
+		return nil
+	}
+	sil := (C.drmaa2_list)(silist)
+	count := (int64)(C.drmaa2_list_size(sil))
+	// ...
+	sis := make([]SlotInfo, 0)
+	for i := (int64)(0); i < count; i++ {
+		csi := (C.drmaa2_slotinfo)(C.drmaa2_list_get(sil, C.long(i)))
+		if csi == nil {
+			continue
+		}
+		// copy C implementation specific
+		// slotInfo struct values -> therefore we need
+		// access to Grid Engine internal header file
+		var gosi SlotInfo
+		ccsi := (C.drmaa2_slotinfo_s)(*csi)
+		gosi.MachineName = C.GoString(ccsi.machineName)
+		// gosi.slots = (int64)C.long(ccsi.slots)
+		sis = append(sis, gosi)
+	}
+	return sis
 }
 
 // Creates a slice of Queues based on C queue list.

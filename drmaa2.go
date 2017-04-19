@@ -218,7 +218,7 @@ func (ext *Extension) describeExtension(t StructType, extensionName string) (str
 	var description C.drmaa2_string
 
 	switch t {
-	case jobInfoType:
+	case JobInfoType:
 		jt := C.drmaa2_jtemplate_create()
 		description = C.drmaa2_describe_attribute(jt.implementationSpecific,
 			C.CString(extensionName))
@@ -675,7 +675,7 @@ func makeLastError() *Error {
 	defer C.free(unsafe.Pointer(cerr))
 	msg := C.GoString(cerr)
 	id := C.drmaa2_lasterror()
-	err := makeError(msg, errorIDMap[id])
+	err := makeError(msg, errorIdMap[id])
 	return &err
 }
 

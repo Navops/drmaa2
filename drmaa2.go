@@ -113,24 +113,24 @@ func UnsetNum() int {
 	return C.DRMAA2_UNSET_NUM
 }
 
-// structType is a type which represents the type of
+// StructType is a type which represents the type of
 // an extensible structure.
-type structType int
+type StructType int
 
 const (
-	jobTemplateType = iota
-	jobInfoType
-	reservationTemplateType
-	reservationInfoType
-	queueInfoType
-	machineInfoType
-	notificationType
+	JobTemplateType = iota
+	JobInfoType
+	ReservationTemplateType
+	ReservationInfoType
+	QueueInfoType
+	MachineInfoType
+	NotificationType
 )
 
 // Extension is a struct which is embedded in DRMAA2 objects
 // which are extensible.
 type Extension struct {
-	SType         structType        // Stores the type of the struct
+	SType         StructType        // Stores the type of the struct
 	Internal      unsafe.Pointer    // Enhancmement of C struct
 	ExtensionList map[string]string // stores the extension requests as string
 }
@@ -150,22 +150,22 @@ type Extensible interface {
 // listExtension calls the C function for listing implementation specific
 // enhancements for an object defined by the argument of the
 // function.
-func listExtensions(t structType) []string {
+func listExtensions(t StructType) []string {
 	var clist C.drmaa2_string_list
 	switch t {
-	case jobTemplateType:
+	case JobTemplateType:
 		clist = C.drmaa2_jtemplate_impl_spec()
-	case jobInfoType:
+	case JobInfoType:
 		clist = C.drmaa2_jinfo_impl_spec()
-	case reservationTemplateType:
+	case ReservationTemplateType:
 		clist = C.drmaa2_rtemplate_impl_spec()
-	case queueInfoType:
+	case QueueInfoType:
 		clist = C.drmaa2_queueinfo_impl_spec()
-	case machineInfoType:
+	case MachineInfoType:
 		clist = C.drmaa2_machineinfo_impl_spec()
-	case reservationInfoType:
+	case ReservationInfoType:
 		clist = C.drmaa2_rinfo_impl_spec()
-	case notificationType:
+	case NotificationType:
 		clist = C.drmaa2_notification_impl_spec()
 	default:
 	}
@@ -181,28 +181,28 @@ func listExtensions(t structType) []string {
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the JobTemplate object.
 func (jt *JobTemplate) ListExtensions() []string {
-	return listExtensions(jobTemplateType)
+	return listExtensions(JobTemplateType)
 }
 
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the Machine object.
 func (m *Machine) ListExtensions() []string {
-	return listExtensions(machineInfoType)
+	return listExtensions(MachineInfoType)
 }
 
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the Queue object.
 func (q *Queue) ListExtensions() []string {
-	return listExtensions(queueInfoType)
+	return listExtensions(QueueInfoType)
 }
 
 // ListExtensions returns a string list containing all implementation specific
 // extensions of the JobInfo object.
 func (ji *JobInfo) ListExtensions() []string {
-	return listExtensions(jobInfoType)
+	return listExtensions(JobInfoType)
 }
 
-func (ext *Extension) describeExtension(t structType, extensionName string) (string, error) {
+func (ext *Extension) describeExtension(t StructType, extensionName string) (string, error) {
 	if ext.Internal != nil {
 		cdesc := C.drmaa2_describe_attribute(ext.Internal,
 			C.CString(extensionName))
@@ -240,13 +240,13 @@ func (ext *Extension) describeExtension(t structType, extensionName string) (str
 // JobTemplate extension as a string.
 func (jt *JobTemplate) DescribeExtension(extensionName string) (string, error) {
 	// good candidate for an init function in the session manager
-	return jt.describeExtension(jobTemplateType, extensionName)
+	return jt.describeExtension(JobTemplateType, extensionName)
 }
 
 // TODO MachineInfo / Queue / JobInfo etc.
 
 // checks if a certain extension exists for a given type
-func extensionExists(t structType, ext string) bool {
+func extensionExists(t StructType, ext string) bool {
 	// TODO expensive - better store available extensions
 	// here a DRMAA2 init could be really useful
 	extensions := listExtensions(t)
@@ -259,7 +259,7 @@ func extensionExists(t structType, ext string) bool {
 }
 
 // Sets a DRM specific extension to a value
-func (ext *Extension) setExtension(t structType, extension, value string) error {
+func (ext *Extension) setExtension(t StructType, extension, value string) error {
 	if extensionExists(t, extension) {
 		if ext.ExtensionList == nil {
 			ext.ExtensionList = make(map[string]string)
@@ -272,22 +272,22 @@ func (ext *Extension) setExtension(t structType, extension, value string) error 
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (jt *JobTemplate) SetExtension(extension, value string) error {
-	return jt.setExtension(jobTemplateType, extension, value)
+	return jt.setExtension(JobTemplateType, extension, value)
 }
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (m *Machine) SetExtension(extension, value string) error {
-	return m.setExtension(machineInfoType, extension, value)
+	return m.setExtension(MachineInfoType, extension, value)
 }
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (ji *JobInfo) SetExtension(extension, value string) error {
-	return ji.setExtension(jobInfoType, extension, value)
+	return ji.setExtension(JobInfoType, extension, value)
 }
 
 // SetExtension adds an vendor specific attribute to the extensible structure.
 func (q *Queue) SetExtension(extension, value string) error {
-	return q.setExtension(queueInfoType, extension, value)
+	return q.setExtension(QueueInfoType, extension, value)
 }
 
 // TODO the other extensions: notification / reservation info / template
@@ -387,10 +387,10 @@ var capMap = map[Capability]C.drmaa2_capability{
 }
 
 // DRMAA2 error ID
-type errorId int
+type ErrorId int
 
 const (
-	Success errorId = iota
+	Success ErrorId = iota
 	DeniedByDrms
 	DrmCommunication
 	TryLater
@@ -408,7 +408,7 @@ const (
 )
 
 // Maps a C drmaa2_error type into a Go ErrorId
-var errorIdMap = map[C.drmaa2_error]errorId{
+var errorIdMap = map[C.drmaa2_error]ErrorId{
 	C.DRMAA2_SUCCESS:                 Success,
 	C.DRMAA2_DENIED_BY_DRMS:          DeniedByDrms,
 	C.DRMAA2_DRM_COMMUNICATION:       DrmCommunication,
@@ -649,7 +649,7 @@ func convertGoStateToC(s JobState) (state C.drmaa2_jstate) {
 // DRMAA2 error (implements GO Error interface).
 type Error struct {
 	Message string
-	Id      errorId
+	Id      ErrorId
 }
 
 // The DRMAA2 Error implements the Error interface.
@@ -666,7 +666,7 @@ func (ce Error) String() string {
 func makeError(msg string, id ErrorId) Error {
 	var ce Error
 	ce.Message = msg
-	ce.ID = id
+	ce.Id = id
 	return ce
 }
 

@@ -1342,7 +1342,7 @@ func (job *Job) modify(delegate *Sudo, operation modop) error {
 
 // Terminate tells the resource manager to kill the job.
 func (job *Job) TerminateForced() error {
-	return job.modify(terminate_forced)
+	return job.modify(nil, terminate_forced)
 }
 
 // Stops a job / process from beeing executed (typically a

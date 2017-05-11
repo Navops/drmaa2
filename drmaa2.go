@@ -1382,6 +1382,12 @@ func (job *Job) TerminateAs(delegate Sudo) error {
 	return job.modify(&delegate, terminate)
 }
 
+// TerminateForcedAs tells the resource manager to kill the job.
+// This will run as the specififed sudo user.
+func (job *Job) TerminateForcedAs(delegate Sudo) error {
+	return job.modify(&delegate, terminate_forced)
+}
+
 // Blocking wait until the job is started. The timeout
 // prefents that the call is blocking endlessly. Special
 // timeouts are available by the constants InfiniteTime

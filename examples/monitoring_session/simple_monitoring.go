@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/dgruber/drmaa2"
+	"github.com/Navops/drmaa2"
 	"time"
 )
 
@@ -22,7 +22,7 @@ func main() {
 	// otherwise the filter will not work correctly.
 	ji := drmaa2.CreateJobInfo()
 	// We want to list all jobs submitted by that user.
-	ji.JobOwner = "root"
+	// ji.JobOwner = "root"
 
 	// The Univa Grid Engine DRMAA2 implementation is event based
 	// meaning that GetAllJobs() can be called as often as required,
@@ -33,8 +33,17 @@ func main() {
 		if jobs, err := ms.GetAllJobs(&ji); err != nil {
 			fmt.Printf("Error during GetAllJobs() call: %s\n", err)
 		} else {
-			fmt.Printf("All jobs owned by user root: %s\n", jobs)
+			fmt.Printf("All jobs : %s\n", jobs)
+			for _, j := range jobs {
+				fmt.Printf("Job ID: %s\n", j.GetId())
+				fmt.Println(j.GetState())
+				if ji, errJI := j.GetJobInfo(); errJI == nil {
+					fmt.Printf("Job Name: %s\n", ji.JobName)
+					fmt.Printf("job info extensions: %s\n", ji.ListExtensions())
+				}
+			}
 		}
+		break
 		time.Sleep(d)
 	}
 }

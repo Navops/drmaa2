@@ -17,25 +17,15 @@ func main() {
 	// We need to close the Monitoring Session at exit
 	defer ms.CloseMonitoringSession()
 
-	// Create a JobInfo as filter with UNSET values. This is required
-	// otherwise the filter will not work correctly.
-	ji := drmaa2.CreateJobInfo()
-	// We want to list all jobs submitted by that user.
-	// ji.JobOwner = "cbrunner"
-
 	// The Univa Grid Engine DRMAA2 implementation is event based
 	// meaning that GetAllJobs() can be called as often as required,
 	// it does not trigger addional communication to the qmaster
 	// process.
-	if jobs, err := ms.GetAllJobs(&ji); err != nil {
+	if jobs, err := ms.GetAllJobs(nil); err != nil {
 		fmt.Printf("Error during GetAllJobs() call: %s\n", err)
 	} else {
-		if len(jobs) > 0 {
-			if ji, err := jobs[0].GetJobInfo(); err != nil {
-				fmt.Printf("Error during GetJobInfo() call: %s\n", err)
-			} else {
-				fmt.Printf("UGE Job: %+v\n", ji)
-			}
+		for _, j := range jobs {
+			fmt.Printf("Job id [%s] Job Name [%s]\n", j.GetId(), j.GetName())
 		}
 
 	}

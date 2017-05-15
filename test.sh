@@ -4,17 +4,11 @@
 # of your Univa Grid Engine installation before building. "default" is the CELL name, which can
 # be different in your setup.
 
-if [ "$SGE_ROOT" = "" ]; then
-    echo "source your Grid Engine settings.(c)sh file"
-    exit 1
-fi
-
 ARCH=`$SGE_ROOT/util/arch`
-
 export CGO_LDFLAGS="-L$SGE_ROOT/lib/$ARCH/"
 export CGO_CFLAGS="-I$SGE_ROOT/include"
-export LD_LIBRARY_PATH=$SGE_ROOT/lib/$ARCH
 
-go build -a
-go install 
-# go test -v
+export DYLD_LIBRARY_PATH=$SGE_ROOT/lib/$ARCH
+export LD_LIBRARY_PATH=$DYLD_LIBRARY_PATH
+go test -tags unit -v
+

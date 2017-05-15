@@ -108,11 +108,6 @@ import "C"
 
 // Interface definitions
 
-// Expose UnsetNum for use with job filters
-func UnsetNum() int {
-	return C.DRMAA2_UNSET_NUM
-}
-
 // StructType is a type which represents the type of
 // an extensible structure.
 type StructType int
@@ -1390,11 +1385,6 @@ func (job *Job) modify(delegate *Sudo, operation modop) error {
 		return makeLastError()
 	}
 	return nil
-}
-
-// Terminate tells the resource manager to kill the job.
-func (job *Job) TerminateForced() error {
-	return job.modify(nil, terminate_forced)
 }
 
 // Stops a job / process from beeing executed (typically a

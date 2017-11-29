@@ -20,7 +20,7 @@ func main() {
 
 	// Create a JobInfo as filter with UNSET values. This is required
 	// otherwise the filter will not work correctly.
-	// ji := drmaa2.CreateJobInfo()
+	ji := drmaa2.CreateJobInfo()
 	// We want to list all jobs submitted by that user.
 	// ji.JobOwner = "root"
 
@@ -30,7 +30,7 @@ func main() {
 	// process.
 	d, _ := time.ParseDuration("1s")
 	for {
-		if jobs, err := ms.GetAllJobs(nil); err != nil {
+		if jobs, err := ms.GetAllJobs(&ji); err != nil {
 			fmt.Printf("Error during GetAllJobs() call: %s\n", err)
 		} else {
 			fmt.Printf("All jobs : %s\n", jobs)

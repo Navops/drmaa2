@@ -15,6 +15,7 @@ export CGO_LDFLAGS="-L$SGE_ROOT/lib/$ARCH/"
 export CGO_CFLAGS="-I$SGE_ROOT/include"
 export LD_LIBRARY_PATH=$SGE_ROOT/lib/$ARCH
 
+go clean
 go build -a
 go install 
 # go test -v

@@ -1354,7 +1354,7 @@ const (
 	terminate_forced
 )
 
-func (job *Job) modify(delegate *Sudo, operation modop) error {
+func (job *Job) modify(delegate *Sudo, operation modop, check_session bool) error {
 	cjob := convertGoJobToC(*job)
 	var as *C.drmaa2_sudo_t = nil
 	if delegate != nil {
@@ -1378,7 +1378,11 @@ func (job *Job) modify(delegate *Sudo, operation modop) error {
 	case terminate:
 		ret = C.drmaa2_j_terminate_as(as, cjob, C.DRMAA2_FALSE)
 	case terminate_forced:
-		ret = C.drmaa2_j_terminate_as(as, cjob, C.DRMAA2_TRUE)
+		if check_session == true {
+			ret = C.drmaa2_j_terminate_as(as, cjob, C.DRMAA2_TRUE)
+		} else {
+			ret = C.drmaa2_j_terminate_all_as(as, cjob, C.DRMAA2_FALSE)
+		}
 	}
 	defer C.drmaa2_j_free(&cjob)
 	if ret != C.DRMAA2_SUCCESS {
@@ -1390,13 +1394,13 @@ func (job *Job) modify(delegate *Sudo, operation modop) error {
 // Stops a job / process from beeing executed (typically a
 // SIGSTOP or SIGTSTP signal is sent to the job / process).
 func (job *Job) Suspend() error {
-	return job.modify(nil, suspend)
+	return job.modify(nil, suspend, true)
 }
 
 // Resume continues to run a job / process (typically
 // a SIGCONT signal is sent to the job / process).
 func (job *Job) Resume() error {
-	return job.modify(nil, resume)
+	return job.modify(nil, resume, true)
 }
 
 // Hold set the job into an hold state so that it is not
@@ -1404,35 +1408,46 @@ func (job *Job) Resume() error {
 // to run and the hold state becomes only effectice when
 // the job is rescheduled.
 func (job *Job) Hold() error {
-	return job.modify(nil, hold)
+	return job.modify(nil, hold, true)
 }
 
 // Release removes the hold state from the job so that it will
 // be considered as a schedulable job.
 func (job *Job) Release() error {
-	return job.modify(nil, release)
+	return job.modify(nil, release, true)
 }
 
 // Terminate tells the resource manager to kill the job.
 func (job *Job) Terminate() error {
-	return job.modify(nil, terminate)
+	return job.modify(nil, terminate, true)
 }
 
 // Terminate tells the resource manager to kill the job.
 func (job *Job) TerminateForced() error {
-	return job.modify(nil, terminate_forced)
+	return job.modify(nil, terminate_forced, true)
 }
 
 // TerminateAs tells the resource manager to kill the job.
 // This will run as the specififed sudo user.
 func (job *Job) TerminateAs(delegate Sudo) error {
-	return job.modify(&delegate, terminate)
+	return job.modify(&delegate, terminate, true)
 }
 
 // TerminateForcedAs tells the resource manager to kill the job.
 // This will run as the specififed sudo user.
 func (job *Job) TerminateForcedAs(delegate Sudo) error {
-	return job.modify(&delegate, terminate_forced)
+	return job.modify(&delegate, terminate_forced, true)
+}
+
+// Terminate tells the resource manager to kill all jobs.
+func (job *Job) TerminateForcedAll() error {
+	return job.modify(nil, terminate_forced, false)
+}
+
+// TerminateForcedAllAs tells the resource manager to kill all jobs.
+// This will run as the specififed sudo user.
+func (job *Job) TerminateForcedAllAs(delegate Sudo) error {
+	return job.modify(&delegate, terminate_forced, false)
 }
 
 // Blocking wait until the job is started. The timeout
